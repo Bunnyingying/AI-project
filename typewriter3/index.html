@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Motorola Fix Beeper - Recorder Edition</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=VT323&display=swap"
+    rel="stylesheet">
+  <style>
+    /* --- 全局样式 --- */
+    :root {
+      --tw-body: #c0c0b0;
+      --tw-dark: #7a7a6a;
+      --tw-key: #333;
+      --beeper-green: #9ea792;
+      --beeper-border: #7e8673;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #2c2c2c;
+      background-image:
+        radial-gradient(#444 2px, transparent 2px),
+        radial-gradient(#444 2px, transparent 2px);
+      background-size: 30px 30px;
+      background-position: 0 0, 15px 15px;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Courier Prime', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      user-select: none;
+    }
+
+    .desk-area {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 1000px;
+    }
+
+    /* =========================================
+       --- 左侧时间轴 ---
+       ========================================= */
+    .timeline-sidebar {
+      position: fixed;
+      left: 20px;
+      top: 0;
+      bottom: 0;
+      width: 120px;
+      z-index: 5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    /* 绳子 */
+    .timeline-rope {
+      position: absolute;
+      top: -20px;
+      bottom: 0;
+      width: 4px;
+      background: #8d6e63;
+      border-radius: 4px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+      background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(0, 0, 0, 0.2) 5px, rgba(0, 0, 0, 0.2) 10px);
+    }
+
+    /* 绳子上的标签容器 */
+    .timeline-items-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: visible;
+      padding-top: 40px;
+      /* 隐藏滚动条 */
+      scrollbar-width: none;
+      pointer-events: auto;
+    }
+
+    .timeline-items-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* 单个标签索引 */
+    .timeline-tag {
+      position: relative;
+      margin: 0 auto 20px auto;
+      width: 90px;
+      padding: 8px;
+      background: #fff8e1;
+      color: #5d4037;
+      font-size: 10px;
+      font-family: 'Courier Prime', monospace;
+      box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+      transform: rotate(-2deg);
+      border: 1px solid #d7ccc8;
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .timeline-tag:nth-child(even) {
+      transform: rotate(3deg);
+    }
+
+    .timeline-tag:hover {
+      transform: scale(1.1) rotate(0deg);
+      z-index: 10;
+    }
+
+    /* 模拟挂绳的线 */
+    .timeline-tag::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      width: 2px;
+      height: 10px;
+      background: #a1887f;
+      transform: translateX(-50%);
+    }
+
+    /* =========================================
+       --- CSS 绘制的打字机 ---
+       ========================================= */
+    .css-typewriter-container {
+      position: relative;
+      width: 360px;
+      height: 280px;
+      z-index: 20;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform: scale(0.75) translateY(180px) rotateX(10deg);
+      transition: transform 0.3s;
+    }
+
+    .tw-roller-assembly {
+      width: 320px;
+      height: 60px;
+      background: #555;
+      border-radius: 5px 5px 0 0;
+      position: relative;
+      background: linear-gradient(to bottom, #444, #888 40%, #444);
+      box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+      z-index: 22;
+    }
+
+    .tw-paper-slot-gap {
+      position: absolute;
+      bottom: 20px;
+      left: 30px;
+      width: 300px;
+      height: 10px;
+      background: #111;
+      z-index: 21;
+    }
+
+    .tw-body-main {
+      width: 360px;
+      height: 50px;
+      background: var(--tw-body);
+      border-bottom: 10px solid var(--tw-dark);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+      position: relative;
+      z-index: 23;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .tw-logo-bar {
+      width: 60%;
+      height: 20px;
+      background: #222;
+      border: 2px solid #555;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #aaa;
+      font-family: sans-serif;
+      font-size: 10px;
+      letter-spacing: 1px;
+    }
+
+    .tw-keyboard-deck {
+      width: 360px;
+      height: 130px;
+      background: var(--tw-body);
+      transform-origin: top;
+      transform: rotateX(-25deg);
+      border-bottom: 15px solid var(--tw-dark);
+      padding: 10px 20px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-shadow: 0 20px 30px rgba(0, 0, 0, 0.5);
+      z-index: 24;
+    }
+
+    .tw-key-row {
+      display: flex;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .tw-key {
+      width: 25px;
+      height: 25px;
+      text-align: center;
+      line-height: 25px;
+      color: #c0c0b084;
+      background: var(--tw-key);
+      border-radius: 4px;
+      box-shadow: inset 0 3px 5px rgba(255, 255, 255, 0.2), 0 3px 0 #111, 0 5px 5px rgba(0, 0, 0, 0.4);
+      transition: transform 0.05s;
+    }
+
+    .tw-key.active {
+      transform: translateY(2px);
+      box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.5), 0 1px 0 #111, 0 2px 2px rgba(0, 0, 0, 0.4);
+    }
+
+    .tw-key.space {
+      width: 150px;
+    }
+
+    /* =========================================
+       --- 纸张卡片样式 ---
+       ========================================= */
+    .paper-card {
+      position: absolute;
+      width: 240px;
+      min-height: 180px;
+      max-height: 300px;
+      background: #fdfbf7;
+      color: #2a2a2a;
+      padding: 38px 20px 10px 20px;
+      box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+      font-size: 16px;
+      cursor: grab;
+      z-index: 15;
+      background-image: linear-gradient(#e6e6e6 1px, transparent 1px);
+      background-size: 100% 28px;
+      border: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      transform-origin: center center;
+      /* 新增过渡样式用于高亮 */
+      transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+    }
+
+    /* 预览卡片 (实时打字时显示) */
+    .paper-card.preview-card {
+      z-index: 100;
+      opacity: 0.95;
+      transition: none;
+    }
+
+    .paper-card::before {
+      content: '';
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-1.5deg);
+      width: 90px;
+      height: 25px;
+      background: rgba(195, 195, 195, 0.35);
+      backdrop-filter: blur(2px);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      border-left: 1px solid rgba(255, 255, 255, 0.4);
+      border-right: 1px solid rgba(255, 255, 255, 0.4);
+      clip-path: polygon(2% 0, 98% 2%, 100% 100%, 0% 98%);
+      pointer-events: none;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      width: 18px;
+      height: 18px;
+      background: #d32f2f;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 16px;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 10;
+    }
+
+    /* 预览卡片没有删除按钮 */
+    .paper-card.preview-card .delete-btn {
+      display: none;
+    }
+
+    .paper-card:hover .delete-btn {
+      opacity: 1;
+    }
+
+    .paper-content {
+      flex-grow: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 5px;
+      scrollbar-width: thin;
+      scrollbar-color: #ccc transparent;
+      line-height: 28px;
+      outline: none;
+    }
+
+    .paper-content::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .paper-content::-webkit-scrollbar-thumb {
+      background-color: #ccc;
+      border-radius: 4px;
+    }
+
+    .paper-content[contenteditable="true"] {
+      cursor: text;
+    }
+
+    .paper-date {
+      font-size: 10px;
+      color: #888;
+      font-family: sans-serif;
+      border-top: 1px dashed #ccc;
+      padding-top: 5px;
+      text-align: right;
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    /* 打字动画完成后的微弱过渡 */
+    .paper-card.transition-mode {
+      transition: top 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s, box-shadow 0.3s;
+    }
+
+    .paper-card:active {
+      cursor: grabbing;
+      box-shadow: 5px 15px 25px rgba(0, 0, 0, 0.4);
+      z-index: 100 !important;
+      transition: none !important;
+    }
+
+    .typing-cursor::after {
+      content: '▌';
+      color: #555;
+      animation: blink 0.8s step-end infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0;
+      }
+    }
+
+    /* --- 底部控制台 --- */
+    .control-panel {
+      position: fixed;
+      bottom: 20px;
+      z-index: 50;
+      background: #1a1a1a;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      border: 3px solid #444;
+      border-bottom-width: 6px;
+    }
+
+    input[type="text"] {
+      background: var(--beeper-green);
+      border: inset 4px var(--beeper-border);
+      padding: 8px 12px;
+      font-family: 'VT323', monospace;
+      font-size: 24px;
+      color: #000;
+      width: 300px;
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: inset 2px 2px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    input[type="text"]::placeholder {
+      color: #6d7563;
+      opacity: 0.7;
+    }
+
+    button {
+      background: #c62828;
+      color: #f0f0f0;
+      border: none;
+      padding: 10px 20px;
+      font-family: 'Courier Prime', monospace;
+      font-weight: 700;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-shadow: 0 5px #8e0000;
+      transition: all 0.1s;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    button:active {
+      box-shadow: 0 2px #8e0000;
+      transform: translateY(3px);
+    }
+
+    button:disabled {
+      background: #555;
+      box-shadow: 0 5px #333;
+      color: #888;
+      cursor: not-allowed;
+    }
+
+    /* 导出按钮样式 */
+    #exportBtn {
+      background: #fbc02d;
+      color: #3e2723;
+      box-shadow: 0 5px #f57f17;
+    }
+
+    #exportBtn:active {
+      box-shadow: 0 2px #f57f17;
+    }
+
+    .brand-label {
+      position: absolute;
+      top: -12px;
+      left: 15px;
+      background: #1a1a1a;
+      color: #888;
+      font-size: 10px;
+      padding: 2px 8px;
+      font-family: sans-serif;
+      letter-spacing: 1px;
+      border: 1px solid #444;
+      border-bottom: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="timeline-sidebar">
+    <div class="timeline-rope"></div>
+    <div class="timeline-items-container" id="timelineContainer">
+    </div>
+  </div>
+
+  <div class="desk-area" id="desk">
+    <div class="css-typewriter-container">
+      <div class="tw-roller-assembly"></div>
+      <div class="tw-paper-slot-gap"></div>
+      <div class="tw-body-main">
+        <div class="tw-logo-bar">MOTOROLA 模拟打字机</div>
+      </div>
+      <div class="tw-keyboard-deck" id="keyboard">
+        <div class="tw-key-row">
+          <div class="tw-key">Q</div>
+          <div class="tw-key">W</div>
+          <div class="tw-key">E</div>
+          <div class="tw-key">R</div>
+          <div class="tw-key">T</div>
+          <div class="tw-key">Y</div>
+          <div class="tw-key">U</div>
+          <div class="tw-key">I</div>
+          <div class="tw-key">O</div>
+          <div class="tw-key">P</div>
+        </div>
+        <div class="tw-key-row">
+          <div class="tw-key">A</div>
+          <div class="tw-key">S</div>
+          <div class="tw-key">D</div>
+          <div class="tw-key">F</div>
+          <div class="tw-key">G</div>
+          <div class="tw-key">H</div>
+          <div class="tw-key">J</div>
+          <div class="tw-key">K</div>
+          <div class="tw-key">L</div>
+        </div>
+        <div class="tw-key-row">
+          <div class="tw-key">Z</div>
+          <div class="tw-key">X</div>
+          <div class="tw-key">C</div>
+          <div class="tw-key space"></div>
+          <div class="tw-key">V</div>
+          <div class="tw-key">B</div>
+          <div class="tw-key">N</div>
+          <div class="tw-key">M</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="control-panel">
+    <div class="brand-label">MOTOROLA FIX BEEPER UNIT</div>
+    <input type="text" id="textInput" placeholder="TYPE HERE..." maxlength="500" autocomplete="off">
+    <button id="printBtn" onclick="createCard()" disabled>PRINT</button>
+    <button id="exportBtn" onclick="exportMarkdown()">EXPORT</button>
+  </div>
+
+  <script>
+    const desk = document.getElementById('desk');
+    const input = document.getElementById('textInput');
+    const printBtn = document.getElementById('printBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const timelineContainer = document.getElementById('timelineContainer');
+    const typewriterContainer = document.querySelector('.css-typewriter-container');
+
+    let cardsData = [];
+    let currentPreviewCard = null; // 用于存储当前的实时预览卡片DOM
+
+    window.onload = function () {
+      loadData();
+      input.focus();
+    };
+
+    let audioCtx;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playClickSound(char) {
+      if (!audioCtx) initAudio();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      // 播放打字音
+      const t = audioCtx.currentTime;
+      const bufferSize = audioCtx.sampleRate * 0.05;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 800;
+      const gainNode = audioCtx.createGain();
+      gainNode.gain.setValueAtTime(0.5, t);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.05);
+      noise.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      noise.start(t);
+
+      // 模拟键盘按键动画 (功能 5)
+      const charUpper = char.toUpperCase();
+      let key = null;
+
+      if (char === ' ') {
+        key = document.querySelector('.tw-key.space');
+      } else if (charUpper.match(/[A-Z]/)) {
+        // 查找包含特定字母的 key
+        const allKeys = document.querySelectorAll('.tw-key');
+        allKeys.forEach(k => {
+          if (k.textContent.trim() === charUpper) {
+            key = k;
+          }
+        });
+      }
+
+      if (key) {
+        key.classList.add('active');
+        setTimeout(() => key.classList.remove('active'), 100);
+      }
+    }
+
+    // 帮助函数：获取当前时间戳
+    function getTimestamp() {
+      const now = new Date();
+      return {
+        date: now.getFullYear() + "-" +
+          String(now.getMonth() + 1).padStart(2, '0') + "-" +
+          String(now.getDate()).padStart(2, '0'),
+        time: String(now.getHours()).padStart(2, '0') + ":" +
+          String(now.getMinutes()).padStart(2, '0'),
+        full: now.getFullYear() + "-" +
+          String(now.getMonth() + 1).padStart(2, '0') + "-" +
+          String(now.getDate()).padStart(2, '0') + " " +
+          String(now.getHours()).padStart(2, '0') + ":" +
+          String(now.getMinutes()).padStart(2, '0')
+      };
+    }
+
+    // =========================================
+    // 功能 5: 实时打字预览
+    // =========================================
+
+    input.addEventListener('input', startTypingPreview);
+
+    // 监听 Enter 键，触发 createCard
+    input.addEventListener("keypress", function (event) {
+      if (event.key === "Enter" && currentPreviewCard) {
+        event.preventDefault(); // 阻止默认的Enter行为
+        createCard();
+      }
+    });
+
+    function startTypingPreview() {
+      const text = input.value;
+      const char = text.charAt(text.length - 1); // 获取最后一个输入的字符
+
+      exportBtn.disabled = true;
+
+      if (!text) {
+        // 如果输入框为空，移除预览卡片
+        if (currentPreviewCard) {
+          currentPreviewCard.remove();
+          currentPreviewCard = null;
+        }
+        printBtn.disabled = true;
+        return;
+      }
+
+      printBtn.disabled = false; // 有内容时启用 PRINT
+
+      if (!currentPreviewCard) {
+        // 首次输入，创建预览卡片
+        currentPreviewCard = document.createElement('div');
+        currentPreviewCard.className = 'paper-card preview-card';
+        currentPreviewCard.setAttribute('data-id', 'preview');
+
+        // 初始化卡片在打字机上方的位置 (功能 4 的初始位置)
+        currentPreviewCard.style.left = 'calc(50% - 120px)';
+        currentPreviewCard.style.top = 'calc(50% - 140px)';
+        currentPreviewCard.style.transform = `rotate(${(Math.random() * 8) - 4}deg)`;
+        currentPreviewCard.style.zIndex = 100;
+
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'paper-content typing-cursor';
+        contentDiv.innerText = text;
+        currentPreviewCard.appendChild(contentDiv);
+
+        // 添加占位符以保持布局
+        currentPreviewCard.appendChild(document.createElement('div')).className = 'paper-date';
+
+        desk.appendChild(currentPreviewCard);
+
+        // 实时预览卡片也可以拖动
+        makeDraggable(currentPreviewCard, 'preview');
+
+      } else {
+        // 更新内容
+        const contentDiv = currentPreviewCard.querySelector('.paper-content');
+        contentDiv.textContent = text;
+        contentDiv.scrollTop = contentDiv.scrollHeight;
+      }
+
+      // 模拟按键跳动和音效
+      if (char) {
+        playClickSound(char);
+      }
+    }
+
+
+    // =========================================
+    // 固化卡片 (PRINT)
+    // =========================================
+
+    function createCard() {
+      if (!currentPreviewCard) return;
+
+      const text = input.value;
+      if (!text.trim()) return;
+
+      // 清空输入框和预览状态
+      input.value = '';
+      printBtn.disabled = true;
+      input.disabled = true;
+      input.placeholder = "PRINTING...";
+
+      const previewCard = currentPreviewCard;
+      currentPreviewCard = null;
+
+      // 移除预览标记，并添加打字光标 (动画开始前)
+      previewCard.classList.remove('preview-card');
+      previewCard.querySelector('.paper-content').classList.add('typing-cursor');
+
+      // 固化位置信息
+      const finalLeft = previewCard.style.left;
+      const finalTop = previewCard.style.top;
+      const finalTransform = previewCard.style.transform;
+      const angleMatch = finalTransform.match(/rotate\(([^)]+)/);
+      const finalAngle = angleMatch ? parseFloat(angleMatch[1]) : 0;
+
+      const cardId = Date.now();
+      const timestamp = getTimestamp();
+
+      // 恢复卡片的基础结构
+      const contentDiv = previewCard.querySelector('.paper-content');
+
+      // 删除按钮
+      let delBtn = document.createElement('div');
+      delBtn.className = 'delete-btn';
+      delBtn.innerText = '×';
+      previewCard.appendChild(delBtn);
+      delBtn.onclick = function (e) {
+        e.stopPropagation();
+        deleteCard(cardId, previewCard);
+      };
+
+      // 日期
+      const dateDiv = previewCard.querySelector('.paper-date');
+      dateDiv.innerText = timestamp.full;
+
+      // 更新卡片属性
+      previewCard.setAttribute('data-id', cardId);
+      previewCard.classList.add('transition-mode');
+      previewCard.style.zIndex = 15;
+
+      // --- 模拟打字动画 ---
+      const speed = 80;
+      const estimatedTime = text.length * speed;
+
+      contentDiv.textContent = ''; // 清空内容，重新开始 "打印"
+
+      const cardData = {
+        id: cardId,
+        text: text,
+        date: timestamp.full,
+        left: finalLeft,
+        top: finalTop,
+        angle: finalAngle
+      };
+
+      function finishTyping() {
+        contentDiv.classList.remove('typing-cursor');
+        input.disabled = false;
+        input.placeholder = "TYPE HERE...";
+        exportBtn.disabled = false;
+        input.focus();
+
+        // 固化数据 (功能 4: 卡片留在原地)
+        cardsData.push(cardData);
+        saveToStorage();
+
+        // 添加到时间轴 (功能 4)
+        addTimelineItem(cardData);
+
+        setupCardInteraction(previewCard, cardId);
+
+        // 移除 transition-mode 以避免后续拖动时产生延迟
+        setTimeout(() => previewCard.classList.remove('transition-mode'), 100);
+      }
+
+      if (estimatedTime > 5000) {
+        // 极速模式：直接显示结果
+        setTimeout(() => {
+          contentDiv.textContent = text;
+          finishTyping();
+        }, 50);
+      } else {
+        // 正常打字机模式
+        let i = 0;
+
+        function typeWriter() {
+          if (i < text.length) {
+            const char = text.charAt(i);
+            contentDiv.textContent += char;
+            i++;
+            playClickSound(char); // 打字动画播放音效
+            contentDiv.scrollTop = contentDiv.scrollHeight;
+            setTimeout(typeWriter, speed);
+          } else {
+            finishTyping();
+          }
+        }
+        // 无需进纸动画，立即开始打字
+        typeWriter();
+      }
+    }
+
+
+    // =========================================
+    // 功能 1 & 2: 导出 Markdown
+    // =========================================
+
+    function exportMarkdown() {
+      if (cardsData.length === 0) {
+        alert("!");
+        return;
+      }
+
+      // 1. 生成内容 (按日期分组)
+      const groupedByDate = cardsData.reduce((acc, card) => {
+        const datePart = card.date.substring(0, 10); // YYYY-MM-DD
+        if (!acc[datePart]) {
+          acc[datePart] = [];
+        }
+        acc[datePart].push(card);
+        return acc;
+      }, {});
+
+      let mdContent = `# Motorola Fix Beeper Notes Export\n\n`;
+
+      // 遍历日期，按日期顺序输出
+      Object.keys(groupedByDate).sort().forEach(date => {
+        mdContent += `## 🗓 ${date}\n\n`; // H2 为日期 (功能 1)
+
+        // 遍历该日期下的所有卡片
+        groupedByDate[date].forEach(card => {
+          const timePart = card.date.substring(11, 16); // HH:MM
+          mdContent += `### 🕒 ${timePart}\n`; // H3 为时间 (功能 1)
+          mdContent += `${card.text}\n\n`; // 正文内容
+        });
+
+        mdContent += `---\n\n`; // 日期之间的分隔线
+      });
+
+      // 2. 创建下载
+      const today = getTimestamp().date; // 获取当前日期
+      const fileName = `${today}随心记.md`; // (功能 2)
+
+      const blob = new Blob([mdContent], {
+        type: 'text/markdown'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName; // 使用新文件名
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      // 3. 清除所有内容
+      setTimeout(() => {
+        if (confirm("Export successful. Clear all notes now?")) {
+          cardsData = [];
+          saveToStorage();
+
+          const allCards = document.querySelectorAll('.paper-card');
+          allCards.forEach(c => c.remove());
+
+          timelineContainer.innerHTML = '';
+        }
+      }, 100);
+    }
+
+
+    // =========================================
+    // 功能 3: 时间轴和卡片高亮
+    // =========================================
+
+    function addTimelineItem(data) {
+      const tag = document.createElement('div');
+      tag.className = 'timeline-tag';
+      tag.id = 'tag-' + data.id;
+
+      let preview = data.text.substring(0, 10);
+      if (data.text.length > 10) preview += "...";
+
+      tag.innerHTML = `<strong>${data.date.split(' ')[1]}</strong><br>${preview}`;
+      tag.title = data.date;
+
+      // 功能 3: 添加点击事件
+      tag.addEventListener('click', () => highlightCard(data.id));
+
+      timelineContainer.appendChild(tag);
+      timelineContainer.scrollTop = timelineContainer.scrollHeight;
+    }
+
+    function highlightCard(id) {
+      const targetCard = document.querySelector(`.paper-card[data-id="${id}"]`);
+      if (targetCard) {
+        // 1. 置于顶层
+        const allCards = document.querySelectorAll('.paper-card');
+        allCards.forEach(c => c.style.zIndex = 15);
+        targetCard.style.zIndex = 1000;
+
+        // 2. 高亮动画
+        const originalTransform = targetCard.style.transform;
+
+        // 暂时移除旋转，执行放大高亮动画
+        targetCard.style.transition = 'transform 0.15s, box-shadow 0.15s';
+        targetCard.style.transform = 'scale(1.05) rotate(0deg)';
+        targetCard.style.boxShadow = '0 0 15px 5px rgba(255, 255, 0, 0.7)'; // 闪烁效果
+
+        // 恢复动画
+        setTimeout(() => {
+          targetCard.style.transform = originalTransform;
+          targetCard.style.boxShadow = '2px 2px 10px rgba(0, 0, 0, 0.3)';
+
+          // 移除过渡，避免影响拖动
+          setTimeout(() => {
+            targetCard.style.transition = 'none';
+            targetCard.style.zIndex = 15; // 恢复正常 z-index
+          }, 150);
+
+        }, 500);
+      }
+    }
+
+
+    // =========================================
+    // 存储、加载、拖动
+    // =========================================
+
+    function deleteCard(id, cardElement) {
+      if (confirm("Delete this note?")) {
+        cardElement.remove();
+        cardsData = cardsData.filter(c => c.id != id);
+        saveToStorage();
+
+        const tag = document.getElementById('tag-' + id);
+        if (tag) tag.remove();
+      }
+    }
+
+    function setupCardInteraction(card, id) {
+      const contentDiv = card.querySelector('.paper-content');
+
+      contentDiv.addEventListener('dblclick', function () {
+        contentDiv.setAttribute('contenteditable', 'true');
+        contentDiv.focus();
+        card.setAttribute('draggable', 'false');
+      });
+
+      contentDiv.addEventListener('blur', function () {
+        contentDiv.setAttribute('contenteditable', 'false');
+        const index = cardsData.findIndex(c => c.id == id);
+        if (index !== -1) {
+          cardsData[index].text = contentDiv.innerText;
+          saveToStorage();
+        }
+      });
+
+      makeDraggable(card, id);
+    }
+
+    function makeDraggable(el, id) {
+      let isDragging = false;
+      let startX, startY, initialLeft, initialTop, currentZIndex;
+
+      el.addEventListener('mousedown', (e) => {
+        if (el.querySelector('.paper-content').getAttribute('contenteditable') === 'true' || e.target.className === 'delete-btn') return;
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        initialLeft = el.offsetLeft;
+        initialTop = el.offsetTop;
+
+        currentZIndex = el.style.zIndex;
+        el.style.zIndex = 1000;
+        el.style.cursor = 'grabbing';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        el.style.left = `${initialLeft + dx}px`;
+        el.style.top = `${initialTop + dy}px`;
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          el.style.zIndex = currentZIndex;
+          el.style.cursor = 'grab';
+
+          // 只有固化后的卡片才保存位置
+          if (id !== 'preview') {
+            const index = cardsData.findIndex(c => c.id == id);
+            if (index !== -1) {
+              cardsData[index].left = el.style.left;
+              cardsData[index].top = el.style.top;
+              saveToStorage();
+            }
+          } else if (id === 'preview' && el === currentPreviewCard) {
+            // 保存预览卡片的当前位置，用于固化
+            currentPreviewCard.style.left = el.style.left;
+            currentPreviewCard.style.top = el.style.top;
+          }
+        }
+      });
+    }
+
+    function saveToStorage() {
+      localStorage.setItem('motorola_beeper_notes', JSON.stringify(cardsData));
+    }
+
+    function loadData() {
+      const stored = localStorage.getItem('motorola_beeper_notes');
+      if (stored) {
+        cardsData = JSON.parse(stored);
+        cardsData.forEach(data => {
+          restoreCardDOM(data);
+          addTimelineItem(data);
+        });
+      }
+    }
+
+    function restoreCardDOM(data) {
+      const card = document.createElement('div');
+      card.className = 'paper-card';
+      card.setAttribute('data-id', data.id);
+
+      card.style.left = data.left;
+      card.style.top = data.top;
+      card.style.transform = `rotate(${data.angle}deg)`;
+
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'paper-content';
+      contentDiv.innerText = data.text;
+      card.appendChild(contentDiv);
+
+      const delBtn = document.createElement('div');
+      delBtn.className = 'delete-btn';
+      delBtn.innerText = '×';
+      delBtn.onclick = function (e) {
+        e.stopPropagation();
+        deleteCard(data.id, card);
+      };
+      card.appendChild(delBtn);
+
+      const dateDiv = document.createElement('div');
+      dateDiv.className = 'paper-date';
+      dateDiv.innerText = data.date;
+      card.appendChild(dateDiv);
+
+      desk.appendChild(card);
+
+      setupCardInteraction(card, data.id);
+    }
+  </script>
+</body>
+
+</html>
