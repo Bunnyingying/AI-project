@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>个人计划（月视图）</title>
+  <meta name="description" content="一个简洁的每周个人计划与待办管理工具，支持本地保存、导入导出、打印与暗色模式。">
+  <link rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'%3E%3Crect width='128' height='128' rx='16' fill='%23007aff'/%3E%3Cpath d='M28 36h72v12H28zM28 58h48v12H28zM28 80h30v12H28z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+</head>
+
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">📅</span>
+      <h1>月视图计划列表</h1>
+    </div>
+    <div class="controls">
+      <button id="prevMonthBtn" class="btn">上月</button>
+      <div class="week-range" id="monthRangeLabel">本月</div>
+      <button id="nextMonthBtn" class="btn">下月</button>
+      <button id="todayBtn" class="btn secondary">回到本月</button>
+      <div class="spacer"></div>
+      <button id="quickAddBtn" class="btn">添加任务</button>
+      <button id="exportBtn" class="btn secondary">导出</button>
+      <label class="file-btn">
+        <input id="importInput" type="file" accept="application/json">
+        <span>导入</span>
+      </label>
+      <button id="printBtn" class="btn secondary">打印</button>
+      <button id="themeToggleBtn" class="btn icon" title="切换主题">🌓</button>
+    </div>
+  </header>
+
+  <section class="top-progress-wrap">
+    <div class="progress" id="weekProgress">
+      <span class="progress-text">完成度：0%</span>
+      <div class="bar">
+        <div class="bar-inner"></div>
+      </div>
+    </div>
+  </section>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>本月目标+倒计时 :</h2>
+          <div class="month-progress">
+            <div class="month-progress-bar">
+              <div class="month-progress-inner" id="monthProgressInner"></div>
+            </div>
+            <span class="month-progress-text" id="monthProgressText">0%</span>
+          </div>
+        </div>
+        <ul id="weeklyGoalsList" class="goal-list"></ul>
+        <div class="inline-form">
+          <input id="newWeeklyGoalInput" type="text" placeholder="添加一个月目标…">
+          <button id="addWeeklyGoalBtn" class="btn">添加</button>
+        </div>
+      </section>
+
+<section class="panel thoughts-module">
+  <h2>每日感想</h2>
+  <div class="thought-input-area">
+    <textarea id="weeklyNotes" placeholder="记录今天的感受、反思与收获…"></textarea>
+    <div class="thought-actions">
+      <button id="saveThoughtBtn" class="btn">保存感想</button>
+    </div>
+  </div>
+  <div class="thought-preview" id="thoughtPreview"></div>
+</section>
+    </aside>
+
+    <section class="week">
+      <div class="month-weeknames">
+        <div>周一</div>
+        <div>周二</div>
+        <div>周三</div>
+        <div>周四</div>
+        <div>周五</div>
+        <div>周六</div>
+        <div>周日</div>
+      </div>
+      <div class="month-grid" id="monthGrid">
+        <!-- JavaScript 渲染月视图 -->
+      </div>
+    </section>
+  </main>
+
+  <template id="monthDayTemplate">
+    <div class="month-day" data-dropzone="true">
+      <div class="month-day-header">
+        <span class="md-date">1</span>
+        <button class="icon-btn add-day-task-btn" title="添加事项">＋</button>
+      </div>
+      <ul class="task-list"></ul>
+    </div>
+  </template>
+
+  <template id="taskItemTemplate">
+    <li class="task" draggable="true">
+      <label class="task-main">
+        <input type="checkbox" class="task-check">
+        <span class="task-title"></span>
+      </label>
+      <div class="task-actions">
+        <button class="icon-btn up" title="上移">↑</button>
+        <button class="icon-btn down" title="下移">↓</button>
+        <button class="icon-btn edit" title="编辑">✎</button>
+        <button class="icon-btn delete" title="删除">🗑</button>
+      </div>
+    </li>
+  </template>
+
+  <!-- 统一添加任务对话框 -->
+  <div id="addDialog" class="dialog-backdrop" hidden>
+    <div class="dialog">
+      <h3>添加任务</h3>
+      <div class="dialog-body">
+        <label class="dialog-row">
+          <span>日期</span>
+          <input type="date" id="addDateInput">
+        </label>
+        <label class="dialog-row">
+          <span>内容</span>
+          <input type="text" id="addTitleInput" placeholder="输入任务内容…">
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button id="addCancelBtn" class="btn secondary">取消</button>
+        <button id="addConfirmBtn" class="btn">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右键悬浮操作菜单（任务/目标通用） -->
+  <div id="contextMenu" class="bubble-menu" hidden>
+    <button data-action="up" class="icon-btn">↑ 上移</button>
+    <button data-action="down" class="icon-btn">↓ 下移</button>
+    <button data-action="edit" class="icon-btn">✎ 编辑</button>
+    <button data-action="delete" class="icon-btn">🗑 删除</button>
+  </div>
+
+  <!-- 导出格式下拉菜单 -->
+  <div id="exportMenu" class="dropdown-menu" hidden>
+    <button data-format="json" class="btn secondary">导出 JSON</button>
+    <button data-format="markdown" class="btn secondary">导出 Markdown</button>
+    <button data-format="word" class="btn secondary">导出 Word</button>
+    <button data-format="pdf" class="btn secondary">导出 PDF</button>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>
