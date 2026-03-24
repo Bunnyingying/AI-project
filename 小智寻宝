@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>小智寻宝 - 计算思维测评整合版</title>
+    <style>
+        :root {
+            --primary: #38B2AC;
+            --secondary: #E53E3E;
+            --accent: #FFD93D;
+            --grid-size: 50px;
+        }
+
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        #progress-inner {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .level-info {
+            color: #666;
+            font-weight: bold;
+        }
+
+        #stage-content {
+            min-height: 350px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pattern-row {
+            display: flex;
+            gap: 15px;
+            margin: 30px 0;
+            align-items: center;
+        }
+
+        .shape {
+            width: 70px;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+
+        .tri {
+            background: #FF9800;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .cir {
+            background: #2196F3;
+            border-radius: 50%;
+        }
+
+        .squ {
+            background: #4CAF50;
+        }
+
+        .empty {
+            border: 3px dashed #ccc;
+            background: #f9f9f9;
+            color: #999;
+        }
+
+        #maze-container {
+            position: relative;
+            width: 400px;
+            height: 300px;
+            background-color: #fff;
+            border: 2px solid #333;
+            margin: 20px 0;
+            background-image: linear-gradient(#eee 1px, transparent 1px), linear-gradient(90deg #eee 1px, transparent 1px);
+            background-size: var(--grid-size) var(--grid-size);
+        }
+
+        .entity {
+            position: absolute;
+            width: var(--grid-size);
+            height: var(--grid-size);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 30px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .obstacle {
+            position: absolute;
+            background: #718096;
+            border: 1px solid #7f8c8d;
+        }
+
+        .workspace {
+            width: 100%;
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .palette,
+        .program {
+            flex: 1;
+            border: 2px solid #e1e4e8;
+            border-radius: 10px;
+            padding: 10px;
+            min-height: 120px;
+            background: #fafafa;
+        }
+
+        .zone-title {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .block {
+            background: var(--primary);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            margin: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .block.active {
+            background: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .block:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .block:hover {
+            background: #2d9c96;
+        }
+
+        .feedback {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+            width: 100%;
+            display: none;
+            font-size: 18px;
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        .feedback.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .success-bg {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error-bg {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        button {
+            padding: 14px 36px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .btn-main {
+            background: var(--secondary);
+            color: white;
+            transition: 0.3s;
+        }
+
+        .btn-main:hover {
+            background: #d32f2f;
+            transform: scale(1.05);
+        }
+
+        .btn-reset {
+            background: #bdc3c7;
+            color: white;
+            transition: 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: #a9b0b5;
+            transform: scale(1.05);
+        }
+
+        #result-page {
+            display: none;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .score-display {
+            font-size: 72px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* 新增：每题对错展示样式 */
+        .answer-detail {
+            margin: 30px auto;
+            max-width: 500px;
+            text-align: left;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 15px 20px;
+            background: #fafbfc;
+        }
+
+        .answer-detail h4 {
+            margin: 0 0 10px 0;
+            color: #555;
+            font-size: 16px;
+        }
+
+        .answer-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 15px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .answer-item:last-child {
+            border-bottom: none;
+        }
+
+        .answer-correct {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .answer-wrong {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        .guide-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .guide-box {
+            background: white;
+            width: 90%;
+            max-width: 420px;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .guide-box h3 {
+            font-size: 20px;
+            margin-bottom: 15px;
+            color: #38B2AC;
+        }
+
+        .guide-box p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #444;
+            margin-bottom: 20px;
+        }
+
+        .guide-btn {
+            background: #38B2AC;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 30px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .coord {
+            position: absolute;
+            font-size: 12px;
+            color: #999;
+            pointer-events: none;
+        }
+
+        .face-text {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .wall-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 12px;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div id="game-ui">
+            <div class="header">
+                <h1>🤖 小智寻宝：计算思维大挑战</h1>
+                <div class="level-info">关卡 <span id="current-step">1</span> / 6：<span id="level-title">加载中</span></div>
+                <div class="progress-bar">
+                    <div id="progress-inner"></div>
+                </div>
+            </div>
+
+            <div id="stage-content"></div>
+            <div id="feedback-box" class="feedback"></div>
+
+            <div class="controls">
+                <button id="action-btn" class="btn-main" onclick="handleSubmit()">提交答案</button>
+                <button id="reset-btn" class="btn-reset" onclick="initLevel()">重置</button>
+            </div>
+        </div>
+
+        <div id="result-page">
+            <h2>🎊 测评任务完成！</h2>
+            <div class="score-display" id="final-score">0</div>
+
+            <div style="margin: 20px 0; display: flex; justify-content: center; gap: 40px;">
+                <div>
+                    <p style="font-size: 14px; color: #999;">模式识别</p>
+                    <p style="font-size: 36px; color: #4ECDC4;" id="pattern-score">0</p>
+                </div>
+                <div>
+                    <p style="font-size: 14px; color: #999;">算法设计</p>
+                    <p style="font-size: 36px; color: #FF6B6B;" id="algo-score">0</p>
+                </div>
+            </div>
+
+            <div class="answer-detail" id="answer-detail"></div>
+
+            <p id="eval-text" style="font-size: 18px; color: #666; margin: 20px 0;"></p>
+            <p id="dimension-eval" style="font-size: 16px; color: #666; line-height: 1.6;"></p>
+            <button class="btn-main" onclick="location.reload()">重新挑战</button>
+        </div>
+    </div>
+
+    <!-- 礼花库 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        // ============= 音效函数 =============
+        function playSuccessSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-achievement-bell-600.mp3');
+            audio.volume = 0.6;
+            audio.play().catch(() => { });
+        }
+
+        function playFailSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3');
+            audio.volume = 0.5;
+            audio.play().catch(() => { });
+        }
+
+        function playCelebrationSound() {
+            const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3');
+            audio.volume = 0.8;
+            audio.play().catch(() => { });
+        }
+
+        // ============= 礼花效果 =============
+        function launchConfetti() {
+            var count = 200;
+            var defaults = { origin: { y: 0.7 } };
+            function fire(particleRatio, opts) {
+                confetti({ ...defaults, ...opts, particleCount: Math.floor(count * particleRatio) });
+            }
+            fire(0.25, { spread: 26, startVelocity: 55 });
+            fire(0.2, { spread: 60 });
+            fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+            fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+            fire(0.1, { spread: 120, startVelocity: 45 });
+        }
+
+        // ============= 游戏主体 =============
+        const stages = [
+            { type: 'pattern', title: '模式识别 (基础)', desc: '观察序列，找出最后一个图形该放什么？', data: ['tri', 'cir', 'tri', 'cir'], answer: 'tri', explain: '这是简单的 ABAB 循环模式。' },
+            { type: 'pattern', title: '模式识别 (进阶)', desc: '序列变得复杂了，找出规律：', data: ['squ', 'squ', 'cir', 'squ', 'squ'], answer: 'cir', explain: '规律是两个正方形紧跟一个圆形 (AABAAB)。' },
+            { type: 'pattern', title: '模式识别 (挑战)', desc: '仔细观察图形数量的变化规律：', data: ['tri', 'squ', 'squ', 'cir', 'cir', 'cir', 'tri'], answer: 'squ', explain: '这是一个递增模式：1个三角形、2个正方形、3个圆形。' },
+            { type: 'algo', title: '算法设计 (基础)', desc: '小智需要前进 3 格到达旗帜处。', start: { x: 1, y: 4 }, goal: { x: 4, y: 4 }, obs: [], answer: ['前进', '前进', '前进'], hint: '数一数，旗帜在小智前面几格？' },
+            { type: 'algo', title: '算法设计 (进阶)', desc: '中间有障碍物，请先转弯绕行。', start: { x: 1, y: 5 }, goal: { x: 3, y: 3 }, obs: [{ x: 1, y: 4, w: 2, h: 1 }], answer: ["右转", "右转", "前进", "左转", "左转", "前进", "前进"], hint: '注意：转弯指令只改变方向，不走格子。' },
+            { type: 'algo', title: '算法设计 (挑战)', desc: '规划最精准的路线躲避复杂障碍！', start: { x: 0, y: 5 }, goal: { x: 7, y: 0 }, obs: [{ x: 0, y: 3, w: 6, h: 1 }, { x: 2, y: 1, w: 6, h: 1 }], answer: ["前进", "前进", "右转", "前进", "前进", "前进", "左转", "前进", "前进", "右转", "前进", "前进", "前进", "左转", "前进"], hint: '利用S型路线绕过长条形墙壁。' }
+        ];
+
+        let currentIdx = 0;
+        let totalScore = 0;
+        let patternScore = 0;
+        let algoScore = 0;
+        let isRunning = false;
+        let robotState = { x: 0, y: 0, face: 'up' };
+        let stageResults = [false, false, false, false, false, false];
+        let stageScores = [0, 0, 0, 0, 0, 0];
+        let currentStageRemaining = 0;
+        let currentStagePenalty = 0;
+
+        const shapeNames = { tri: '三角形', cir: '圆形', squ: '正方形' };
+
+        function addStage(stageConfig) { stages.push(stageConfig); }
+        function getIcon(shape) { return shape === 'tri' ? '▲' : shape === 'cir' ? '●' : '■'; }
+
+        function showGuide() {
+            const stage = stages[currentIdx];
+            let msg = stage.type === "pattern"
+                ? "💡 提示：观察前面的图形排列规律，点击下方按钮选择最后一个图形"
+                : currentIdx >= 3
+                    ? "💡 提示：点击指令让小智移动，避开墙壁，到达红旗位置就通关啦！本关卡碰到墙扣10分，扣完则结束本关。"
+                    : "💡 提示：点击指令让小智移动，避开墙壁，到达红旗位置就通关啦！";
+
+            const modal = document.createElement("div");
+            modal.className = "guide-modal";
+            modal.innerHTML = `
+                <div class="guide-box">
+                    <h3>📘 关卡指引</h3>
+                    <p>${msg}</p>
+                    <button class="guide-btn" onclick="this.closest('.guide-modal').remove()">我知道啦 ✅</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function renderCoords(maze) {
+            for (let x = 0; x <= 7; x++) {
+                const c = document.createElement("div");
+                c.className = "coord";
+                c.innerText = x;
+                c.style.left = x * 50 + 22 + "px";
+                c.style.top = "-16px";
+                maze.appendChild(c);
+            }
+            for (let y = 0; y <= 5; y++) {
+                const c = document.createElement("div");
+                c.className = "coord";
+                c.innerText = y;
+                c.style.left = "-18px";
+                c.style.top = y * 50 + 15 + "px";
+                maze.appendChild(c);
+            }
+        }
+
+        function renderPattern(stage, container) {
+            const row = document.createElement('div');
+            row.className = 'pattern-row';
+            stage.data.forEach(s => row.innerHTML += `<div class="shape ${s}">${getIcon(s)}</div>`);
+            row.innerHTML += `<div class="shape empty" id="target-slot">?</div>`;
+            container.appendChild(row);
+
+            const palette = document.createElement('div');
+            palette.style.textAlign = 'center';
+            ['tri', 'cir', 'squ'].forEach(s => {
+                palette.innerHTML += `<div class="block" style="margin:0 10px" onclick="selectShape('${s}')">${getIcon(s)} 选择</div>`;
+            });
+            container.appendChild(palette);
+        }
+
+        function renderAlgo(stage, container) {
+            const mazeWrap = document.createElement('div');
+            mazeWrap.innerHTML = `
+                <div id="maze-container">
+                    <div id="robot" class="entity">🤖<div class="face-text">朝上</div></div>
+                    <div class="entity" style="left:${stage.goal.x * 50}px; top:${stage.goal.y * 50}px">🚩</div>
+                </div>
+                <div class="workspace">
+                    <div class="palette"><div class="zone-title">指令库</div>
+                        <div class="block" onclick="executeCmd('前进')">前进 ↑</div>
+                        <div class="block" onclick="executeCmd('左转')">左转 ←</div>
+                        <div class="block" onclick="executeCmd('右转')">右转 →</div>
+                    </div>
+                    <div class="program"><div class="zone-title">已执行指令</div><div id="code-list"></div></div>
+                </div>
+                <div id="penalty-info" style="margin-top: 10px; color: #d32f2f; font-weight:bold;height:24px;"></div>`;
+            container.appendChild(mazeWrap);
+
+            const robot = document.getElementById('robot');
+            const maze = document.getElementById('maze-container');
+            renderCoords(maze);
+
+            robot.style.left = robotState.x * 50 + 'px';
+            robot.style.top = robotState.y * 50 + 'px';
+            updateRobotRotation(robot);
+
+            stage.obs.forEach(o => {
+                const div = document.createElement('div');
+                div.className = 'obstacle';
+                div.style.cssText = `left:${o.x * 50}px; top:${o.y * 50}px; width:${o.w * 50}px; height:${o.h * 50}px;`;
+                div.innerHTML = '<div class="wall-text">墙</div>';
+                maze.appendChild(div);
+            });
+            updateCmdButtonStatus();
+        }
+
+        function updateRobotRotation(robot) {
+            const rotationMap = { up: 0, right: 90, down: 180, left: 270 };
+            const faceTextMap = { up: "朝上", right: "朝右", down: "朝下", left: "朝左" };
+            robot.style.transform = `rotate(${rotationMap[robotState.face]}deg)`;
+            robot.querySelector(".face-text").innerText = faceTextMap[robotState.face];
+        }
+
+        function updateCmdButtonStatus() {
+            document.querySelectorAll('.palette .block').forEach(btn => {
+                btn.style.pointerEvents = isRunning ? 'none' : 'auto';
+                btn.style.opacity = isRunning ? '0.6' : '1';
+            });
+        }
+
+        function selectShape(s) {
+            const slot = document.getElementById('target-slot');
+            slot.className = `shape ${s}`;
+            slot.innerHTML = getIcon(s);
+            slot.dataset.val = s;
+        }
+
+        function showFeedback(isSuccess, text) {
+            const fb = document.getElementById('feedback-box');
+            fb.className = `feedback ${isSuccess ? 'success-bg' : 'error-bg'}`;
+            fb.innerHTML = text;
+            fb.style.display = 'block';
+            setTimeout(() => fb.classList.add('show'), 10);
+        }
+
+        async function executeCmd(cmd) {
+            if (isRunning) return;
+            isRunning = true;
+            updateCmdButtonStatus();
+
+            const stage = stages[currentIdx];
+            const robot = document.getElementById('robot');
+            let nx = robotState.x, ny = robotState.y, nf = robotState.face;
+
+            if (cmd === '前进') {
+                switch (nf) {
+                    case 'up': ny--; break;
+                    case 'down': ny++; break;
+                    case 'left': nx--; break;
+                    case 'right': nx++; break;
+                }
+            } else if (cmd === '左转') {
+                nf = { up: 'left', left: 'down', down: 'right', right: 'up' }[nf];
+            } else if (cmd === '右转') {
+                nf = { up: 'right', right: 'down', down: 'left', left: 'up' }[nf];
+            }
+
+            const hitObstacle = stage.obs.some(o => nx >= o.x && nx < o.x + o.w && ny >= o.y && ny < o.y + o.h);
+            const outOfBounds = nx < 0 || nx > 7 || ny < 0 || ny > 5;
+            const stageMaxPoints = (currentIdx + 1) * 15;
+
+            if (hitObstacle || outOfBounds) {
+                const message = hitObstacle ? '😯 碰到墙壁！' : '😯 超出边界！';
+
+                if (stage.type === 'algo' && currentIdx >= 3) {
+                    currentStagePenalty += 10;
+                    currentStageRemaining = Math.max(0, stageMaxPoints - currentStagePenalty);
+                    playFailSound();
+                    showFeedback(false, `${message}已扣10分，当前可得 ${currentStageRemaining} 分`);
+
+                    const penaltyInfo = document.getElementById('penalty-info');
+                    if (penaltyInfo) {
+                        penaltyInfo.innerText = '-10 分';
+                        setTimeout(() => { penaltyInfo.innerText = ''; }, 2000);
+                    }
+
+                    if (currentStageRemaining <= 0) {
+                        stageResults[currentIdx] = false;
+                        stageScores[currentIdx] = 0;
+                        setTimeout(() => {
+                            currentIdx++;
+                            currentIdx < stages.length ? initLevel() : showResult();
+                        }, 2000);
+                        isRunning = false;
+                        updateCmdButtonStatus();
+                        return;
+                    }
+
+                    isRunning = false;
+                    updateCmdButtonStatus();
+                    return;
+                }
+
+                playFailSound();
+                showFeedback(false, `${message}本题结束，进入下一关`);
+                stageResults[currentIdx] = false;
+
+                setTimeout(() => {
+                    currentIdx++;
+                    currentIdx < stages.length ? initLevel() : showResult();
+                }, 2000);
+
+                isRunning = false;
+                updateCmdButtonStatus();
+                return;
+            }
+
+            robotState.x = nx;
+            robotState.y = ny;
+            robotState.face = nf;
+
+            if (cmd === '前进') {
+                robot.style.left = nx * 50 + 'px';
+                robot.style.top = ny * 50 + 'px';
+            } else {
+                updateRobotRotation(robot);
+            }
+
+            const cmdBlock = document.createElement('div');
+            cmdBlock.className = 'block';
+            cmdBlock.innerText = cmd;
+            document.getElementById('code-list').appendChild(cmdBlock);
+
+            await new Promise(resolve => setTimeout(resolve, cmd === '前进' ? 450 : 200));
+
+            if (nx === stage.goal.x && ny === stage.goal.y) {
+                playSuccessSound();
+                showFeedback(true, '🎉 答对啦！进入下一关');
+                stageResults[currentIdx] = true;
+
+                if (stage.type === 'algo') {
+                    const award = currentStageRemaining > 0 ? currentStageRemaining : (currentIdx + 1) * 15;
+                    stageScores[currentIdx] = award;
+                    algoScore += award;
+                    totalScore += award;
+                } else {
+                    const award = (currentIdx + 1) * 15;
+                    stageScores[currentIdx] = award;
+                    patternScore += award;
+                    totalScore += award;
+                }
+
+                setTimeout(() => {
+                    currentIdx++;
+                    currentIdx < stages.length ? initLevel() : showResult();
+                }, 1800);
+                return;
+            }
+
+            isRunning = false;
+            updateCmdButtonStatus();
+        }
+
+        async function handleSubmit() {
+            if (isRunning) return;
+            const stage = stages[currentIdx];
+            const userVal = document.getElementById('target-slot').dataset.val;
+            const isCorrect = userVal === stage.answer;
+
+            stageResults[currentIdx] = isCorrect;
+
+            if (isCorrect) {
+                playSuccessSound();
+                const award = (currentIdx + 1) * 15;
+                stageScores[currentIdx] = award;
+                patternScore += award;
+                totalScore += award;
+            } else {
+                playFailSound();
+                stageScores[currentIdx] = 0;
+            }
+
+            const correctName = shapeNames[stage.answer] || stage.answer;
+            showFeedback(isCorrect, isCorrect
+                ? '🎉 答对啦！进入下一关'
+                : `😯 答错啦！正确答案：${correctName}，进入下一关`);
+
+            setTimeout(() => {
+                currentIdx++;
+                currentIdx < stages.length ? initLevel() : showResult();
+            }, 2000);
+        }
+
+        function initLevel() {
+            const stage = stages[currentIdx];
+            isRunning = false;
+            stageScores[currentIdx] = 0;
+            currentStagePenalty = 0;
+            currentStageRemaining = (currentIdx + 1) * 15;
+
+            document.getElementById('current-step').innerText = currentIdx + 1;
+            document.getElementById('level-title').innerText = stage.title;
+            document.getElementById('progress-inner').style.width = `${(currentIdx / stages.length) * 100}%`;
+            document.getElementById('feedback-box').style.display = 'none';
+            document.getElementById('feedback-box').classList.remove('show');
+
+            const actionBtn = document.getElementById('action-btn');
+            if (stage.type === 'algo') {
+                actionBtn.innerText = '重置关卡';
+                actionBtn.onclick = initLevel;
+                document.getElementById('reset-btn').style.display = 'none';
+            } else {
+                actionBtn.innerText = '提交答案';
+                actionBtn.onclick = handleSubmit;
+                document.getElementById('reset-btn').style.display = 'inline-block';
+            }
+
+            const content = document.getElementById('stage-content');
+            content.innerHTML = `<p style="margin-bottom:15px; color:#555;">${stage.desc}</p>`;
+
+            if (stage.type === 'pattern') {
+                renderPattern(stage, content);
+            } else {
+                robotState = { x: stage.start.x, y: stage.start.y, face: 'up' };
+                renderAlgo(stage, content);
+            }
+
+            setTimeout(showGuide, 200);
+        }
+
+        function showResult() {
+            document.getElementById('game-ui').style.display = 'none';
+            document.getElementById('result-page').style.display = 'block';
+            document.getElementById('final-score').innerText = totalScore;
+            document.getElementById('pattern-score').innerText = patternScore;
+            document.getElementById('algo-score').innerText = algoScore;
+
+            // 礼花 + 庆祝音效
+            launchConfetti();
+            playCelebrationSound();
+
+            let detailHtml = `<h4>📝 每题答题详情</h4>`;
+            stages.forEach((s, idx) => {
+                const score = stageScores[idx] || 0;
+                const status = score > 0 ? '<span class="answer-correct">✅ 正确</span>' : '<span class="answer-wrong">❌ 错误</span>';
+                const scoreText = score > 0 ? `第 ${idx + 1} 关：${idx + 1} × 15 = ${score} 分` : `第 ${idx + 1} 关：0 分`;
+                detailHtml += `
+                    <div class="answer-item">
+                        <span>${scoreText}</span>
+                        ${status}
+                    </div>
+                `;
+            });
+            document.getElementById('answer-detail').innerHTML = detailHtml;
+
+            let evalText = totalScore >= 220
+                ? "🎉 你简直是未来的算法架构师！"
+                : totalScore >= 150
+                    ? "👍 你非常优秀！"
+                    : "💪 继续努力，你会越来越棒！";
+            document.getElementById('eval-text').innerText = evalText;
+
+            let dimEval = '';
+            if (patternScore >= 75 && algoScore >= 75) {
+                dimEval = '你既擅长找规律，又能精准规划路线，计算思维超优秀！';
+            } else if (patternScore >= 75 && algoScore < 75) {
+                dimEval = '你的规律观察能力超棒！规划路线可以多练习～';
+            } else if (patternScore < 75 && algoScore >= 75) {
+                dimEval = '你路线规划能力很强！找规律可以更细心一点～';
+            } else {
+                dimEval = '多练习几次，你的计算思维会越来越强！';
+            }
+            document.getElementById('dimension-eval').innerText = dimEval;
+        }
+
+        initLevel();
+    </script>
+</body>
+
+</html>
